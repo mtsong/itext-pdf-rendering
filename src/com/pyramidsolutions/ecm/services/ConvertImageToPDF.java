@@ -1,6 +1,6 @@
-/* Source code for this module is publicly available at https://github.com/mtsong/itext-pdf-rendering */
 package com.pyrasol.ecm.services;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -14,19 +14,19 @@ import javax.servlet.http.HttpServletResponse;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Image;
-import com.itextpdf.text.io.RandomAccessSourceFactory;
 import com.itextpdf.text.pdf.PdfWriter;
-import com.itextpdf.text.pdf.RandomAccessFileOrArray;
-import com.itextpdf.text.pdf.codec.TiffImage;
 
 /**
- * Servlet implementation class ConvertTiffToPDF
+ * Servlet implementation class ConvertImageToPDF
  */
-@WebServlet(asyncSupported = true, description = "Convert TIFF to PDF", urlPatterns = { "/ConvertTiffToPDF" })
+@WebServlet(asyncSupported = true, description = "Convert image to PDF", urlPatterns = { "/ConvertImageToPDF" })
 @MultipartConfig
-public class ConvertTiffToPDF extends HttpServlet {
+public class ConvertImageToPDF extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		Document document = new Document();
 		try {
@@ -34,17 +34,19 @@ public class ConvertTiffToPDF extends HttpServlet {
 			document.open();
 					
 			InputStream is = request.getParts().iterator().next().getInputStream();
-			RandomAccessSourceFactory ras = new RandomAccessSourceFactory();
-			RandomAccessFileOrArray tiff = new RandomAccessFileOrArray(ras.createSource(is));
-			int numPages = TiffImage.getNumberOfPages(tiff);
-			Image image;
-			for (int i = 1; i <= numPages; ++i) {
-				image = TiffImage.getTiffImage(tiff, i);
-				document.setPageSize(image);
-				document.newPage();
-				image.setAbsolutePosition(0, 0);
-				document.add(image);
-			}
+			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            int nRead;
+            byte[] data = new byte[16384];
+
+            while ((nRead = is.read(data, 0, data.length)) != -1)
+              buffer.write(data, 0, nRead);
+
+            buffer.flush();
+            Image image = Image.getInstance(buffer.toByteArray());
+			document.setPageSize(image);
+			document.newPage();
+			image.setAbsolutePosition(0, 0);
+			document.add(image);
 			document.close();          
 		} catch (DocumentException e) {
 			e.printStackTrace();
